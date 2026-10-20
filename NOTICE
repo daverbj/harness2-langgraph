@@ -1,0 +1,12 @@
+Harness² + LangGraph Coding Agent
+
+This project includes Harness² by Google Research:
+https://github.com/google-research/harness2
+Copyright 2026 Google LLC
+Licensed under the Apache License, Version 2.0.
+
+The LangGraph/OpenRouter coding agent, terminal chat, recovery support,
+and related documentation and examples are additions maintained by daverbj.
+This community extension is not an official Google product.
+
+Existing upstream and third-party license notices remain applicable.

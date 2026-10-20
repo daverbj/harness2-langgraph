@@ -1,209 +1,199 @@
-<h3 align="center">
-  <img src="assets/Harness2-wordmark.png" alt="Harness²" width="360"><br>
-  Recursive Agent Harnessing for an Open World
-</h3>
+# Harness² + LangGraph Coding Agent
 
-<p align="center">
-  <a href="https://arxiv.org/pdf/2610.14224"><img src="https://img.shields.io/badge/Paper-arXiv-EA4335?logo=arxiv&logoColor=white" alt="Paper"></a>
-  <a href="https://harness2.github.io"><img src="https://img.shields.io/badge/Website-harness2.github.io-4285F4?logo=googlechrome&logoColor=white" alt="Website"></a>
-  <a href="docs/BENCHMARKS.md"><img src="https://img.shields.io/badge/Docs-Benchmark%20guides-FBBC04" alt="Benchmark guides"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-34A853" alt="License"></a>
-</p>
+A streaming terminal coding assistant with OpenRouter models and an explicit
+`/improve` command for Harness² refinement. Maintained by
+[daverbj](https://github.com/daverbj), built on
+[Google Research's Harness²](https://github.com/google-research/harness2).
 
-<p align="center">
-  <a href="docs/BENCHMARKS.md#jobbench">
-    <img src="assets/harness2-setup.gif" alt="Install, set up, and run JobBench: uv pip install -e '.[render]', harness2-setup jb, then harness2 --bench jb --k 1 --mode parallel. Click for prerequisites and commands." width="640">
-  </a>
-</p>
+Chat normally to discuss or change code. Use `/improve` when you want Harness² to
+run a baseline, propose changes to the agent's instructions and skills, probe
+those changes, compose a refined harness, and attempt the task again. Model
+weights stay fixed. Refinement makes extra model calls and does not guarantee
+better code; configure independent tests to measure the result.
 
-A **harness** is the system around a model that enables it to act as an agent:
-prompts, tools, memory, skills, orchestration, and more. **Harnessing** is the
-process of optimizing that system.
+This is a community extension, not an official Google product. The original
+framework, benchmark documentation, attribution, and history are retained. See
+[the upstream README](UPSTREAM_README.md) for the original research project.
 
-Harness² is a plug-and-play framework for **recursive agent harnessing** in an
-open world, where agents encounter tasks unseen during harness design. It
-connects two levels of recursion while keeping model weights fixed:
+## Setup
 
-* **Task-level recursion** refines the execution harness for the current task
-  through a contrastive **Propose–Probe–Compose** step: propose edits, probe
-  their effects on the same task, and compose a refined harness from behavioral
-  contrasts between executions, without ground-truth feedback.
-* **Harnessing-level recursion** updates a persistent *improvement harness*
-  with adopted harnesses and evidence-supported lessons from each task to guide
-  future refinement.
-
-<p align="center">
-  <a href="assets/harness2_pipeline.png">
-    <img src="assets/harness2_pipeline.png" alt="Harness² pipeline. Task-level recursion: an agent executor runs the initial harness, a harness editor proposes invariant and domain edits, candidate probes execute them, and a harness composer combines them into the final harness. Harnessing-level recursion: an experience reflector reflects on the step and updates the improvement harness used for the next task." width="100%">
-  </a>
-</p>
-
-Across three professional benchmarks and four model–harness configurations, a
-single Harness² step improves GLM-5 and Gemini 3.5 Flash over their base
-harnesses, with gains of up to 11.5 points on WorkBuddy-Bench, 4.5 points on
-JobBench, and 11.8 percentage points on LAB's partial pass rate. Increasing the
-task-level recursion budget brings further gains.
-
-The release supports **parallel and sequential recursion**, **OpenCode and
-Codex executors**, and **JobBench, LAB, and WorkBuddy-Bench**.
-
-## Video overview
-
-https://github.com/user-attachments/assets/76b10548-b14b-4c8f-9aa5-a93662df4d56
-
-## Contents
-
-- [Video overview](#video-overview)
-- [Harness components](#harness-components)
-- [Install](#install)
-- [Run a benchmark](#run-a-benchmark)
-- [Experiments](#experiments)
-- [Web access](#web-access)
-- [Results and resume](#results-and-resume)
-- [Citation](#citation)
-- [Contributing](#contributing)
-- [License](#license)
-- [Disclaimer](#disclaimer)
-
-## Harness components
-
-Harness² exposes eight editable components around the model: **system prompt,
-guardrails, memory, tool guidance, subagents, skills, scripts, and plugins**.
-They control context construction, the tool interface, delegation, and behavior
-inside the tool loop.
-
-<p align="center">
-  <a href="assets/components.png">
-    <img src="assets/components.png" alt="Eight harness components grouped by runtime role: system prompt, guardrails, memory, and skills construct context; tool guidance and scripts define the tool interface; subagents orchestrate delegated work; plugins control middleware." width="100%">
-  </a>
-</p>
-
-## Install
-
-Use **Linux, Python 3.12, and [uv](https://docs.astral.sh/uv/getting-started/installation/)**.
-From the repository root:
+Requirements: **macOS or Linux, Git, Python 3.12 or 3.13**, and an OpenRouter API
+key with access to your selected model. Install your target project's build and
+test dependencies separately. Docker, QEMU, Google Cloud, and Node.js are needed
+only when your particular project or an upstream benchmark requires them.
 
 ```bash
-uv venv --python 3.12 .venv
+git clone https://github.com/daverbj/harness2-langgraph.git
+cd harness2-langgraph
+python3.12 -m venv .venv
 source .venv/bin/activate
-uv pip install -e '.[render]'
-harness2-demo --output runs/demo --k 2
-```
-
-The local demo runs both recursion modes with deterministic editors and real
-Python executions. It requires no model credentials.
-
-For model-backed benchmarks, install **Node.js 20+, the Google Cloud CLI**, and
-the [benchmark dependencies](docs/SETUP.md#requirements). LAB needs Pandoc and
-Poppler; WorkBuddy-Bench needs Docker. Then configure your models:
-
-```bash
+python -m pip install -e '.[coding]'
 cp .env.example .env
-# Edit .env with your Vertex AI project and model IDs.
-gcloud auth application-default login
 ```
 
-See the [setup guide](docs/SETUP.md) for model settings, authentication
-alternatives, and the [Codex executor](docs/SETUP.md#codex-executor).
+Edit `.env` and fill in your key:
 
-## Run a benchmark
+```dotenv
+OPENROUTER_API_KEY=your_openrouter_key
+OPENROUTER_MODEL=minimax/minimax-m3
+```
 
-The following example installs LAB and runs one task, then evaluates and reports
-its result. Model-backed runs incur API costs; start with a small task selection.
+The real `.env`, virtual environments, and `runs/` directory are ignored by Git.
+Run the CLI from this checkout to use its `.env`. Exported shell variables take
+precedence. With `uv`, you can instead use `uv venv --python 3.12 .venv` and
+`uv pip install -e '.[coding]'` after activating the environment.
+
+## First run: a small coding task
+
+The [demo project](examples/coding-demo/README.md) has a deliberately broken
+`clamp()` function and five tests. Its tests initially fail by design.
 
 ```bash
-harness2-setup lab
-harness2-check --bench lab
-harness2 --bench lab --k 1 --mode parallel \
-  --only-domains antitrust-competition --max-tasks 1
-harness2-judge --bench lab --k 1 --mode parallel
-harness2-report --bench lab --k 1 --mode parallel
+h2-code chat \
+  --repo examples/coding-demo \
+  --output runs/my-first-chat \
+  --test-command "python -m unittest discover -s tests -v"
 ```
 
-Sequential recursion runs the same commands with `--mode sequential`. `--k` is
-the task-level recursion budget; see [Experiments](#experiments). Judging and
-reporting must use the same benchmark, executor, subset, `--k`, `--mode`, and
-seed as the refinement run. Add `--dry-run` to `harness2` to preview task
-selection without model calls.
+At the `you ❯` prompt, enter:
 
-| Benchmark | Tasks | Install | Guide |
-|---|---|---|---|
-| JobBench | Professional work | `harness2-setup jb` | [JobBench](docs/BENCHMARKS.md#jobbench) |
-| LAB | Legal work | `harness2-setup lab` | [LAB](docs/BENCHMARKS.md#lab) |
-| WorkBuddy-Bench | Office, web, and code | `harness2-setup wb` | [WorkBuddy](docs/BENCHMARKS.md#workbuddy-bench) |
-
-Choose one benchmark per command. WorkBuddy also takes `--subset office`,
-`--subset web`, or `--subset code` on every command after setup. The
-[benchmark guides](docs/BENCHMARKS.md) cover each one's data, domains, and
-grading.
-
-## Experiments
-
-Scale task-level recursion in two ways: **parallel recursion** explores multiple
-candidate harnesses and composes refinements from their execution evidence;
-**sequential recursion** carries the refined harness and accumulated evidence
-through successive Propose–Probe–Compose steps.
-
-<p align="center">
-  <a href="assets/harness2_recursion_modes.png">
-    <img src="assets/harness2_recursion_modes.png" alt="Two ways to scale task-level recursion. Parallel: probe k general and k domain-specific candidate harnesses, then produce k compositions from the shared evidence. Sequential: carry the refined harness and accumulated evidence through k Propose–Probe–Compose steps." width="100%">
-  </a>
-</p>
-<p align="center"><em>Parallel recursion explores wider; sequential recursion refines deeper.</em></p>
-
-| Option | Behavior |
-|---|---|
-| `--k 1` | One Propose–Probe–Compose step |
-| `--k K --mode parallel` | Probe `K` general and `K` domain-specific candidates, then produce `K` compositions |
-| `--k K --mode sequential` | Refine the harness through `K` successive steps |
-| `--substrate cx` | Use Codex instead of the default OpenCode executor |
-
-After each task, harnessing-level recursion retains the adopted harness and
-evidence-supported lessons to guide future refinement. See the
-[experiment guide](docs/EXPERIMENTS.md) for task selection, concurrency,
-reproducibility, and baseline comparisons.
-
-## Web access
-
-Executor network access is unrestricted, and Codex runs with its sandbox
-disabled. Public benchmark rubrics may be accessible online. Before evaluation,
-configure [network restrictions](docs/EXPERIMENTS.md#web-access) to prevent
-access to benchmark answers and grading criteria.
-
-## Results and resume
-
-Results are saved under `runs/`, organized by benchmark and subset where
-applicable. They include task summaries, deliverables, adopted harnesses,
-reflection notes, and evaluation results.
-
-Repeat the same command to resume. Use a new `HARNESS2_RUNS_DIR` when changing
-models or task selection. See [results and resume](docs/EXPERIMENTS.md#results-and-resume)
-for details; each command also supports `--help`.
-
-## Citation
-
-```bibtex
-@article{xu2026harness2,
-  title   = {Harness$^2$: Recursive Agent Harnessing for an Open World},
-  author  = {Xu, Ruiyao and Chen, Yanfei and CuiZhu, Zhongying and Dalvi Mishra, Bhavana and Ming, Yifei and Yu, Han and Han, Rujun and Lee, Chen-Yu and Pfister, Tomas},
-  journal = {arXiv preprint arXiv:2610.14224},
-  year    = {2026},
-  url     = {https://arxiv.org/abs/2610.14224}
-}
+```text
+Explain the project and its failing tests.
+Fix clamp() so that all existing tests pass. Run the tests and summarize the changes.
+/diff
+/test
 ```
 
-## Contributing
+The agent works in `runs/my-first-chat/workspace/`, a copy of the demo. To copy
+reviewed changes back to the original demo, enter `/apply`. You can inspect the
+workspace directly without applying it.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+## Use your own project
 
-## License
+```bash
+h2-code chat \
+  --repo "/absolute/path/to/your/project" \
+  --model minimax/minimax-m3 \
+  --test-command "python -m pytest -q"
+```
 
-Harness² is licensed under [Apache 2.0](LICENSE). Third-party code under
-[`third_party/`](third_party/README.md), benchmarks, and datasets retain their
-upstream licenses; see
-[third-party notices](dependencies/README.md).
+Use the test command that actually works for your project. Ordinary messages use
+the persistent LangGraph model/tool loop. To invoke real Harness² refinement:
 
-## Disclaimer
+```text
+/improve "Fix the failing behavior, preserve existing behavior, and validate with the project's tests."
+```
 
-This is not an officially supported Google product. This project is not eligible
-for the [Google Open Source Software Vulnerability Rewards Program](https://bughunters.google.com/open-source-security).
+`/improve` snapshots the current chat workspace and explores harness changes in
+separate workspaces. A completed selected result is adopted into the chat when
+configured validation passes. Failed-validation candidates remain available for
+review and explicit `/adopt`. Without a validation command, quality improvement
+is reported as unmeasured. At `k=1`, selection follows upstream Harness²'s
+composition policy, rather than picking whichever candidate has the best test
+score. See [the chat guide](CHAT_AGENT.md) for the full behavior.
+
+## Chat commands
+
+| Command | Purpose |
+| --- | --- |
+| `/improve <request>` | Run Harness² refinement for a coding task |
+| `/test [command]` | Set/run project validation |
+| `/diff` | Inspect changes |
+| `/apply` | Export workspace changes to the original project, with conflict checks |
+| `/model minimax/minimax-m3` | Change the OpenRouter model |
+| `/provider auto` | Let OpenRouter route requests |
+| `/provider Google` | Pin a provider and disable fallback; the provider must serve your model |
+| `/effort low` | Set reasoning effort where the selected model supports it |
+| `/thinking on` or `/thinking off` | Show/hide provider-exposed reasoning text |
+| `/tokens 0` | Use the provider's output-token default |
+| `/status` | Show session paths, settings, and known token usage |
+| `/retry` | Recover an interrupted task |
+| `/clear` | Archive conversation history and keep workspace files |
+| `/quit` | Save and exit |
+
+Enter sends a message; Alt+Enter inserts a newline. Ctrl+C interrupts active
+work. Reopen the **same session** to retain its latest files and conversation:
+
+```bash
+h2-code chat --session runs/my-first-chat
+```
+
+`--from-run /path/to/older/run` imports an earlier one-shot run into a **new**
+chat; it does not reopen an existing chat.
+
+## Streaming, recovery, and limits
+
+Assistant text, provider-exposed reasoning, tool arguments, and command output
+stream as received. A provider may buffer output, withhold reasoning, or send
+several tokens in one chunk; the client cannot force individual-token delivery.
+Network keepalives are reported separately from model chunks.
+
+Completed tools and workspace edits are checkpointed. Interrupted text is kept
+as tentative recovery context. Gemini continuation checkpoints can resume
+interrupted generation when the provider supplies them; exact hidden reasoning
+cannot be reconstructed without one. Interrupted commands return to the model
+for inspection and replanning instead of blindly replaying.
+
+Chat defaults have no total request, turn, or overall duration cap. Response/read
+idle timeouts are disabled by default, while connection/write deadlines remain
+finite. Shell commands have a 180-second timeout. Provider-side 504 errors can
+still end a request. Use `--max-calls`, `--max-steps`, `--max-tokens`,
+`--tool-timeout`, and `--stream-idle-timeout` to configure limits. API calls may
+incur charges, including retries.
+
+Filesystem tools restrict paths to the copied workspace, and child shell commands
+omit API credential variables. **Shell and MCP tools still run with your host's
+permissions; a workspace copy is not a security sandbox.** Session traces can
+contain project code and provider reasoning. Keep them private unless reviewed.
+
+## One-shot execution, skills, memory, and MCP
+
+```bash
+# One coding attempt with a fixed harness
+h2-code run --repo /path/to/project --task "Fix the bug" \
+  --test-command "python -m pytest -q"
+
+# Harness² refinement with external validation
+h2-code improve --repo /path/to/project --task "Fix the bug" \
+  --test-command "python -m pytest -q" --k 1 --mode sequential
+
+# Reopen an interrupted one-shot run, or replay its saved trace
+h2-code continue runs/coding/your-run
+h2-code replay runs/coding/your-run
+```
+
+One-shot runs default to a 6,000-token response allowance and a 60-second shell
+command timeout; chat uses provider-default output allowance and 180 seconds.
+
+The active harness contains a system prompt, guardrails, tool guidance,
+`LongTermMEMORY.md`, and loadable `skills/<name>/SKILL.md` files. Harness²'s
+library retains adopted harnesses and supported lessons. Optional MCP servers
+are configured with `--mcp-config /path/to/mcp.json`. See
+[the executor guide](CODING_AGENT.md) for configuration, held-out evaluation,
+reports, and supported harness components.
+
+## Development
+
+```bash
+python -m pip install -e '.[coding,render]'
+python -m unittest discover -s tests/coding -v
+python -m unittest discover -s tests -v
+```
+
+The coding tests use deterministic fake models and a local HTTP streaming server;
+they do not require a real API key. For a credential-free upstream engine demo:
+
+```bash
+harness2-demo --output runs/engine-demo --k 1
+```
+
+Contributions should include a reproducible case and relevant verification. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License and attribution
+
+[Apache License 2.0](LICENSE). Google LLC retains copyright in the upstream
+Harness² work. This repository adds the LangGraph/OpenRouter coding CLI,
+interactive chat, recovery, and related examples and documentation. See
+[NOTICE](NOTICE), [the upstream README](UPSTREAM_README.md), and
+[the upstream setup guide](docs/SETUP.md).

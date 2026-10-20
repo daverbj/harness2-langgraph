@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "harness2"
 version = "0.1.0"
-description = "Harness²: Recursive Agent Harnessing for an Open World"
+description = "Harness² with a streaming LangGraph coding agent and OpenRouter models"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12,<3.14"
@@ -16,14 +16,28 @@ classifiers = [
 ]
 authors = [
     { name = "Google LLC" },
+    { name = "daverbj" },
 ]
 dependencies = []
 
+[project.urls]
+Repository = "https://github.com/daverbj/harness2-langgraph"
+Upstream = "https://github.com/google-research/harness2"
+
 [project.optional-dependencies]
+coding = [
+    "langgraph==1.2.16",
+    "langchain-openai==1.7.2",
+    "httpx==0.28.1",
+    "rich==14.3.4",
+    "prompt-toolkit==3.0.53",
+    "langchain-mcp-adapters==0.3.2",
+]
 render = ["openpyxl>=3.1,<4", "python-pptx>=1,<2"]
 bridge = ["litellm[proxy]==1.95.0", "fastapi==0.139.2", "google-auth==2.56.3"]
 
 [project.scripts]
+h2-code = "harness2.coding.cli:main"
 harness2 = "harness2.cli.run_sweep:main"
 harness2-judge = "harness2.cli.judge:main"
 harness2-report = "harness2.cli.report:main"

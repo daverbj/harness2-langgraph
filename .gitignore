@@ -1,0 +1,32 @@
+# Credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+mcp.local.json
+
+# Agent sessions contain source snapshots, conversations, and private traces
+/runs/
+
+# Python environments and generated artifacts
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Installed upstream benchmark dependencies
+/dependencies/*/
+
+# Editors and OS metadata
+.DS_Store
+.idea/
+.vscode/
